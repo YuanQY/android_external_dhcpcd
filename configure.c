@@ -28,6 +28,9 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <sys/wait.h>
+// Engle, add for test, start
+#include <sys/mman.h>
+// Engle, add for test, end
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -71,6 +74,13 @@ exec_script(char *const *argv, char *const *env)
 	sigset_t full;
 	sigset_t old;
 
+	/*
+	int i = 0;
+	char *envWS = NULL;
+	char *pST = NULL;
+	int fd = 0;
+	char tmpBuff[255];
+    */
 	/* OK, we need to block signals */
 	sigfillset(&full);
 	sigprocmask(SIG_SETMASK, &full, &old);
@@ -81,7 +91,36 @@ exec_script(char *const *argv, char *const *env)
 		syslog(LOG_ERR, "vfork: %m");
 		break;
 	case 0:
+		// Engle, add for test, start
+		/*
+		envWS = getenv("ANDROID_PROPERTY_WORKSPACE");
+		syslog(LOG_ERR, "vfork: %s", envWS);
+		strcpy(tmpBuff, env);
+		pST = strchr(tmpBuff, ',');
+		(*pST) = '\0';
+		syslog(LOG_ERR, "vfork: befor atoi");
+        fd = atoi(tmpBuff);
+        syslog(LOG_ERR, "vfork: after atoi");
+        pST++;
+        syslog(LOG_ERR, "vfork: envWS %s", pST);
+
+        int pa_size = atoi(pST);
+        syslog(LOG_ERR, "vfork: %d", pa_size);
+        unsigned char *pa = (unsigned char )mmap(NULL, pa_size, PROT_READ, MAP_SHARED, fd, 0);
+        syslog(LOG_ERR, "vfork: pa %08x", pa);
+        if (pa == MAP_FAILED) {
+            syslog(LOG_ERR, "exec_script MAP_FAILED %s", strerror(errno));
+        }
+        struct stat fd_stat;
+        if (fstat(fd, &fd_stat) < 0) {
+            syslog(LOG_ERR, "exec_script fstat faile %s\n", strerror(errno));
+        }
+        // Engle, add for test, end
 		sigprocmask(SIG_SETMASK, &old, NULL);
+		i = 0
+		while(env[i] != NULL) {
+			syslog(LOG_DEBUG, "env: %s", env[i++]);
+		}*/
 		execve(argv[0], argv, env);
 		syslog(LOG_ERR, "%s: %m", argv[0]);
 		_exit(127);
@@ -348,6 +387,10 @@ run_script_reason(const struct interface *iface, const char *reason)
 	const struct fd_list *fd;
 	struct iovec iov[2];
 
+#ifdef TARGET_MTK
+	char *props_ws;
+#endif
+
 	if (iface->state->options->script == NULL ||
 	    iface->state->options->script[0] == '\0' ||
 	    strcmp(iface->state->options->script, "/dev/null") == 0)
@@ -360,7 +403,18 @@ run_script_reason(const struct interface *iface, const char *reason)
 
 	/* Make our env */
 	elen = make_env(iface, reason, &env);
-	env = xrealloc(env, sizeof(char *) * (elen + 2));
+#ifdef TARGET_MTK
+	env = xrealloc(env, sizeof(char *) * (elen + 3));
+	props_ws = getenv("ANDROID_PROPERTY_WORKSPACE");
+	if (props_ws != NULL) {
+		elen++;
+	    e = strlen("ANDROID_PROPERTY_WORKSPACE") +  strlen(props_ws) + 2;
+		env[elen] = xmalloc(e);
+	    snprintf(env[elen], e, "ANDROID_PROPERTY_WORKSPACE=%s", props_ws);
+    }
+#else
+    env = xrealloc(env, sizeof(char *) * (elen + 2));
+#endif
 	/* Add path to it */
 	path = getenv("PATH");
 	if (path) {
