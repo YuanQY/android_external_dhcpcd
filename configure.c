@@ -116,11 +116,12 @@ exec_script(char *const *argv, char *const *env)
             syslog(LOG_ERR, "exec_script fstat faile %s\n", strerror(errno));
         }
         // Engle, add for test, end
-		sigprocmask(SIG_SETMASK, &old, NULL);
-		i = 0
+		i = 0;
 		while(env[i] != NULL) {
 			syslog(LOG_DEBUG, "env: %s", env[i++]);
-		}*/
+		}
+		*/
+	    sigprocmask(SIG_SETMASK, &old, NULL);
 		execve(argv[0], argv, env);
 		syslog(LOG_ERR, "%s: %m", argv[0]);
 		_exit(127);
@@ -407,10 +408,10 @@ run_script_reason(const struct interface *iface, const char *reason)
 	env = xrealloc(env, sizeof(char *) * (elen + 3));
 	props_ws = getenv("ANDROID_PROPERTY_WORKSPACE");
 	if (props_ws != NULL) {
-		elen++;
 	    e = strlen("ANDROID_PROPERTY_WORKSPACE") +  strlen(props_ws) + 2;
 		env[elen] = xmalloc(e);
 	    snprintf(env[elen], e, "ANDROID_PROPERTY_WORKSPACE=%s", props_ws);
+	    elen++;
     }
 #else
     env = xrealloc(env, sizeof(char *) * (elen + 2));
